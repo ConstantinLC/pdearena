@@ -1,6 +1,6 @@
 seed_everything: 42
 trainer:
-  default_root_dir: ${oc.env:PDEARENA_OUTPUT_DIR,outputs}/kolmogorov2d-0724-frequency_separation
+  default_root_dir: ${oc.env:PDEARENA_OUTPUT_DIR,outputs}/kolmogorov2d-0724-lr_data_generation
   logger:
     class_path: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
     init_args:

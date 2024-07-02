@@ -107,28 +107,21 @@ class PDEModel(LightningModule):
         self.max_start_time = (
             reduced_time_resolution - self.hparams.time_future * self.hparams.max_num_steps - self.hparams.time_gap
         )
-        self.smoothing_factor = 8
+        self.smoothing_factor = 4
         self.stride = 2
         self.upsample_factor = 2
-        self.multi_resolution = False
+        self.multi_resolution = True
         #n_components = self.pde.n_scalar_components + 2*self.pde.n_vector_components
         n_components = 2
         self.hr_encoder = HR_Encoder(in_channels=n_components, out_channels=n_components, stride=self.stride, smoothing_factor=self.smoothing_factor)
         self.pre_lr_encoder = Pre_LR_Encoder(in_channels=n_components, out_channels=n_components, coarsening_factor=self.upsample_factor)
         self.std_correction = 0.1
         
-        
-    def forward_modified_hr_encoder(self, x, highres_x=None):
-        hr_encoding = self.hr_encoder(highres_x)
-        return self.std_correction * (self.model(x) + hr_encoding) + x
-        #return self.std_correction * self.model(torch.cat((x, hr_encoding), dim=2)) + x
-        #return 0.15* (self.model(x) + hr_encoding) + x
-
     def forward_modified_pre_lr_encoder(self, x):
         #pre_lr_encoding = self.pre_lr_encoder(x)
         return self.std_correction * self.model(x) + x
         #return self.std_correction * self.model(torch.cat((x, pre_lr_encoding), dim=2)) + x
-        #return 0.15* (self.model(x) + pre_lr_encoding) + x
+        #return 0.15* (self.model(x) + pre_lr_encoding) + xa
 
     def forward(self, *args):
         return self.forward_modified_pre_lr_encoder(args[0])
@@ -136,10 +129,10 @@ class PDEModel(LightningModule):
     def train_step(self, batch):
         x, y = batch
         if self.multi_resolution:
-            highres_x = x #highres_x = x[:, :, 2:] #
-            highres_y = y #highres_y = y[:, :, 2:] #
-            x = filters.blur_pool2d(highres_x[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) #x = x[:, :, :2, ::2, ::2] #
-            y = filters.blur_pool2d(highres_y[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) #y = y[:, :, :2, ::2, ::2] #
+            generated_x = x[..., ::2, ::2] #highres_x = x #
+            generated_y = y[..., ::2, ::2] #highres_y = y #
+            x = filters.blur_pool2d(x[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) #x = x[:, :, :2, ::2, ::2] #
+            y = filters.blur_pool2d(y[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) #y = y[:, :, :2, ::2, ::2] #
         else:
             #print(highres_x)
             highres_x = x
@@ -147,28 +140,26 @@ class PDEModel(LightningModule):
             y = filters.box_blur(y[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)
             highres_x = highres_x - x
             
-            
-        pred = self.forward_modified_hr_encoder(x, highres_x)
         #highres_x = x.repeat_interleave(2, dim=-1).repeat_interleave(2, dim=-2)
-        #pred = torch.cat((self.forward_modified_hr_encoder(x, highres_x), self.forward_modified_pre_lr_encoder(x)), dim=0)
-        #y = torch.cat((y, y), dim=0)
+        pred = torch.cat((self.forward(x), self.forward(generated_x)), dim=0)
+        y = torch.cat((y, generated_y), dim=0)
         loss = self.train_criterion(pred, y)
         return loss, pred, y
 
     def eval_step(self, batch):
         x, y = batch
         if self.multi_resolution:
-            highres_x = x #highres_x = x[:, :, 2:] # 
-            highres_y = y #highres_y = y[:, :, 2:] # 
-            x = filters.blur_pool2d(highres_x[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) #x = x[:, :, :2, ::2, ::2] # 
-            y = filters.blur_pool2d(highres_y[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) #y = y[:, :, :2, ::2, ::2] # 
+            generated_x = x[..., ::2, ::2] #highres_x = x #
+            generated_y = y[..., ::2, ::2] #highres_y = y #
+            x = filters.blur_pool2d(x[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) #x = x[:, :, :2, ::2, ::2] #
+            y = filters.blur_pool2d(y[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) #y = y[:, :, :2, ::2, ::2] #
         else:
             highres_x = x
             x = filters.box_blur(x[:,0], kernel_size=self.smoothing_factor).unsqueeze(1) 
             y = filters.box_blur(y[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)
             highres_x = highres_x - x
 
-        pred = self.forward_modified_pre_lr_encoder(x)
+        pred = self.forward(x)
         #pred = self.forward_modified_hr_encoder(x, highres_x)
         loss = {k: vc(pred, y) for k, vc in self.val_criterions.items()}
         return loss, pred, y
