@@ -24,6 +24,20 @@ class FreqLinear(nn.Module):
         h = torch.einsum("tc,cm->tm", x, self.weights) + self.bias
         h = h.reshape(B, self.modes1, self.modes2, 2, 2)
         return torch.view_as_complex(h)
+    
+class FreqLinear1d(nn.Module):
+    def __init__(self, in_channel, modes):
+        super().__init__()
+        self.modes = modes
+        scale = 1 / (in_channel + 4 * modes)
+        self.weights = nn.Parameter(scale * torch.randn(in_channel, 4 * modes, dtype=torch.float32))
+        self.bias = nn.Parameter(torch.zeros(1, 4 * modes, dtype=torch.float32))
+
+    def forward(self, x):
+        B = x.shape[0]
+        h = torch.einsum("tc,cm->tm", x, self.weights) + self.bias
+        h = h.reshape(B, self.modes, 2, 2)
+        return torch.view_as_complex(h)
 
 
 class SpectralConv2d(nn.Module):
@@ -75,4 +89,38 @@ class SpectralConv2d(nn.Module):
 
         # Return to physical space
         x = torch.fft.irfft2(out_ft, s=(x.size(-2), x.size(-1)))
+        return x
+
+
+class SpectralConv1d(nn.Module):
+    def __init__(self, in_channels, out_channels, modes1):
+        super(SpectralConv1d, self).__init__()
+
+        """
+        1D Fourier layer. It does FFT, linear transform, and Inverse FFT.    
+        """
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.modes1 = modes1  #Number of Fourier modes to multiply, at most floor(N/2) + 1
+
+        self.scale = (1 / (in_channels*out_channels))
+        self.weights1 = nn.Parameter(self.scale * torch.rand(in_channels, out_channels, self.modes1, dtype=torch.cfloat))
+
+    # Complex multiplication
+    def compl_mul1d(self, input, weights):
+        # (batch, in_channel, x ), (in_channel, out_channel, x) -> (batch, out_channel, x)
+        return torch.einsum("bix,iox->box", input, weights)
+    
+    def forward(self, x):
+        batchsize = x.shape[0]
+        #Compute Fourier coeffcients up to factor of e^(- something constant)
+        x_ft = torch.fft.rfft(x)
+
+        # Multiply relevant Fourier modes 
+        out_ft = torch.zeros(batchsize, self.out_channels,  x.size(-1)//2 + 1,  device=x.device, dtype=torch.cfloat)
+        out_ft[:, :, :self.modes1] = self.compl_mul1d(x_ft[:, :, :self.modes1], self.weights1)
+
+        #Return to physical space
+        x = torch.fft.irfft(out_ft, n=x.size(-1))
         return x

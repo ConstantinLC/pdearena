@@ -508,7 +508,7 @@ class Unet(nn.Module):
         self.up = nn.ModuleList(up)
 
         if norm:
-            self.norm = nn.GroupNorm(8, n_channels)
+            self.norm = nn.GroupNorm(min(8, n_channels), n_channels)
         else:
             self.norm = nn.Identity()
         out_channels = time_future * (self.n_output_scalar_components + self.n_output_vector_components * 2)

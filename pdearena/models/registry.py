@@ -10,6 +10,7 @@ from pdearena.modules.twod_resnet import (
     DilatedBasicBlock,
     FourierBasicBlock,
 )
+from pdearena.modules.conditioned.oned_resnet import FourierBasicBlock1D, OneD_DilatedBasicBlock
 
 MODEL_REGISTRY = {
     "FNO-128-8m": {
@@ -111,6 +112,52 @@ MODEL_REGISTRY = {
         "init_args": {
             "hidden_channels": 64,
             "norm": True,
+        },
+    },
+    "Unetmod-32": {
+        "class_path": "pdearena.modules.twod_unet.Unet",
+        "init_args": {
+            "hidden_channels": 32,
+            "norm": True,
+        },
+    },
+    "Unetmod-128": {
+        "class_path": "pdearena.modules.twod_unet.Unet",
+        "init_args": {
+            "hidden_channels": 128,
+            "norm": True,
+            #"ch_mults": [1, 1, 2, 4],
+        },
+    },
+    "Unetmod-16": {
+        "class_path": "pdearena.modules.twod_unet.Unet",
+        "init_args": {
+            "hidden_channels": 16,
+            "norm": True,
+        },
+    },
+    "Unetmod-8": {
+        "class_path": "pdearena.modules.twod_unet.Unet",
+        "init_args": {
+            "hidden_channels": 8,
+            "norm": True,
+            #"ch_mults": [1, 1, 2, 4],
+        },
+    },
+    "Unetmod-4": {
+        "class_path": "pdearena.modules.twod_unet.Unet",
+        "init_args": {
+            "hidden_channels": 4,
+            "norm": True,
+            "ch_mults": [1, 1, 2, 4],
+        },
+    },
+    "Unetmod-2": {
+        "class_path": "pdearena.modules.twod_unet.Unet",
+        "init_args": {
+            "hidden_channels": 2,
+            "norm": True,
+            "ch_mults": [1, 1, 2, 4],
         },
     },
     "Unetmodattn-64": {
@@ -327,10 +374,37 @@ MODEL_REGISTRY = {
             "num_blocks": [1, 1, 1, 1],
         },
     },
+    "DilResNet-32": {
+        "class_path": "pdearena.modules.twod_resnet.ResNet",
+        "init_args": {
+            "hidden_channels": 32,
+            "norm": False,
+            "block": DilatedBasicBlock,
+            "num_blocks": [1, 1, 1, 1],
+        },
+    },
+    "DilResNet-64": {
+        "class_path": "pdearena.modules.twod_resnet.ResNet",
+        "init_args": {
+            "hidden_channels": 64,
+            "norm": False,
+            "block": DilatedBasicBlock,
+            "num_blocks": [1, 1, 1, 1],
+        },
+    },
     "DilResNet-128": {
         "class_path": "pdearena.modules.twod_resnet.ResNet",
         "init_args": {
             "hidden_channels": 128,
+            "norm": False,
+            "block": DilatedBasicBlock,
+            "num_blocks": [1, 1, 1, 1],
+        },
+    },
+    "DilResNet-256": {
+        "class_path": "pdearena.modules.twod_resnet.ResNet",
+        "init_args": {
+            "hidden_channels": 256,
             "norm": False,
             "block": DilatedBasicBlock,
             "num_blocks": [1, 1, 1, 1],
@@ -431,6 +505,14 @@ COND_MODEL_REGISTRY = {
             "n_dims": 1,
         },
     },
+    "Unetmod-1d-16": {
+        "class_path": "pdearena.modules.conditioned.oned_unet.Unet",
+        "init_args": {
+            "hidden_channels": 16,
+            "norm": True,
+            "n_dims": 1,
+        },
+    },
     "Unetmodattn-1d-64": {
         "class_path": "pdearena.modules.conditioned.oned_unet.Unet",
         "init_args": {
@@ -503,4 +585,50 @@ COND_MODEL_REGISTRY = {
             "use_scale_shift_norm": True,
         },
     },
+    "DilResNet-1d-64": {
+        "class_path": "pdearena.modules.conditioned.oned_resnet.ResNet",
+        "init_args": {
+            "hidden_channels": 64,
+            "norm": False,
+            "block": OneD_DilatedBasicBlock,
+            "num_blocks": [1, 1, 1, 1],
+        },
+    },
+    "DilResNet-1d-32": {
+        "class_path": "pdearena.modules.conditioned.oned_resnet.ResNet",
+        "init_args": {
+            "hidden_channels": 32,
+            "norm": False,
+            "block": OneD_DilatedBasicBlock,
+            "num_blocks": [1, 1, 1, 1],
+        },
+    },
+    "DilResNet-1d-16": {
+        "class_path": "pdearena.modules.conditioned.oned_resnet.ResNet",
+        "init_args": {
+            "hidden_channels": 16,
+            "norm": False,
+            "block": OneD_DilatedBasicBlock,
+            "num_blocks": [1, 1, 1, 1],
+        },
+    },
+    "DilResNet-1d-128": {
+        "class_path": "pdearena.modules.conditioned.oned_resnet.ResNet",
+        "init_args": {
+            "hidden_channels": 128,
+            "norm": False,
+            "block": OneD_DilatedBasicBlock,
+            "num_blocks": [1, 1, 1, 1],
+        },
+    },
+    "FourierResNet-1d-64": {
+        "class_path": "pdearena.modules.conditioned.oned_resnet.ResNet",
+        "init_args": {
+            "hidden_channels": 64,
+            "norm": False,
+            "block": FourierBasicBlock1D,
+            "num_blocks": [1, 1, 1, 1],
+        },
+    },
 }
+

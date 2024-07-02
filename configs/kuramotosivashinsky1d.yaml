@@ -1,6 +1,6 @@
 seed_everything: 42
 trainer:
-  default_root_dir: ${oc.env:PDEARENA_OUTPUT_DIR,outputs}
+  default_root_dir: ${oc.env:PDEARENA_OUTPUT_DIR,outputs}/ks1d-test
   logger:
     class_path: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
     init_args:
@@ -96,7 +96,7 @@ model:
 
 data:
   task: KuramotoSivashinsky1D
-  data_dir: null
+  data_dir: /mnt/SSD2/constantin/data/Kuramoto-Sivashinsky-1D
   time_history: 1
   time_future: 1
   time_gap: 0

@@ -48,6 +48,7 @@ class KuramotoSivashinskyDatasetOpener(dp.iter.IterDataPipe):
         self.storage = {}
         if preload:
             for path in self.dp:
+                print(path)
                 self.storage[path] = self._load_data(path)
 
     def _load_data(self, path):
@@ -55,6 +56,10 @@ class KuramotoSivashinskyDatasetOpener(dp.iter.IterDataPipe):
             return self.storage[path]
         else:
             with h5py.File(path, "r") as f:
+                """if self.mode == 'train' or self.mode == 'valid':
+                    data_h5 = f['train']
+                else:
+                    data_h5 = f[self.mode]"""
                 data_h5 = f[self.mode]
                 data_key = [k for k in data_h5.keys() if k.startswith("pde_")][0]
                 data = {
@@ -103,6 +108,8 @@ class KuramotoSivashinskyDatasetOpener(dp.iter.IterDataPipe):
         for path in self.dp:
             data = self._load_data(path)
             u = data["u"]
+            #if self.mode == "train":
+             #   u = u[:256]
             if u.ndim == 3:
                 u = u.unsqueeze(0)
             if self.resolution > 0 and u.shape[-1] > self.resolution:

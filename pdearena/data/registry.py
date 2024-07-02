@@ -23,6 +23,13 @@ from .twod.datapipes.navierstokes2d import (
     trajectory_test_datapipe_ns_cond,
     trajectory_valid_datapipe_ns,
 )
+from .twod.datapipes.kolmogorov2d import (
+    onestep_test_datapipe_kg,
+    onestep_valid_datapipe_kg,
+    train_datapipe_kg,
+    trajectory_test_datapipe_kg,
+    trajectory_valid_datapipe_kg
+)
 from .twod.datapipes.shallowwater2d import (
     onestep_test_datapipe_1day_vel,
     onestep_test_datapipe_1day_vort,
@@ -57,6 +64,11 @@ DATAPIPE_REGISTRY["NavierStokes2D"] = {}
 DATAPIPE_REGISTRY["NavierStokes2D"]["train"] = train_datapipe_ns
 DATAPIPE_REGISTRY["NavierStokes2D"]["valid"] = [onestep_valid_datapipe_ns, trajectory_valid_datapipe_ns]
 DATAPIPE_REGISTRY["NavierStokes2D"]["test"] = [onestep_test_datapipe_ns, trajectory_test_datapipe_ns]
+
+DATAPIPE_REGISTRY["Kolmogorov2D"] = {}
+DATAPIPE_REGISTRY["Kolmogorov2D"]["train"] = train_datapipe_kg
+DATAPIPE_REGISTRY["Kolmogorov2D"]["valid"] = [onestep_valid_datapipe_kg, trajectory_valid_datapipe_kg]
+DATAPIPE_REGISTRY["Kolmogorov2D"]["test"] = [onestep_test_datapipe_kg, trajectory_test_datapipe_kg]
 
 DATAPIPE_REGISTRY["Cond-NavierStokes2D"] = {}
 DATAPIPE_REGISTRY["Cond-NavierStokes2D"]["train"] = train_datapipe_ns_cond
