@@ -118,10 +118,7 @@ class PDEModel(LightningModule):
         self.std_correction = 0.1
         
     def forward_modified_pre_lr_encoder(self, x):
-        #pre_lr_encoding = self.pre_lr_encoder(x)
         return self.std_correction * self.model(x) + x
-        #return self.std_correction * self.model(torch.cat((x, pre_lr_encoding), dim=2)) + x
-        #return 0.15* (self.model(x) + pre_lr_encoding) + xa
 
     def forward(self, *args):
         return self.forward_modified_pre_lr_encoder(args[0])
@@ -129,20 +126,18 @@ class PDEModel(LightningModule):
     def train_step(self, batch):
         x, y = batch
         if self.multi_resolution:
-            generated_x = x[..., ::2, ::2] #highres_x = x #
-            generated_y = y[..., ::2, ::2] #highres_y = y #
+            selection = torch.bernoulli(0.5*torch.ones(x.shape[0])).unsqueeze(1).unsqueeze(1).unsqueeze(1).unsqueeze(1).cuda()
+
             x = filters.blur_pool2d(x[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) #x = x[:, :, :2, ::2, ::2] #
             y = filters.blur_pool2d(y[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) #y = y[:, :, :2, ::2, ::2] #
-        else:
-            #print(highres_x)
-            highres_x = x
-            x = filters.box_blur(x[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)
-            y = filters.box_blur(y[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)
-            highres_x = highres_x - x
-            
-        #highres_x = x.repeat_interleave(2, dim=-1).repeat_interleave(2, dim=-2)
-        pred = torch.cat((self.forward(x), self.forward(generated_x)), dim=0)
-        y = torch.cat((y, generated_y), dim=0)
+            generated_x = x + torch.randn(x.shape).cuda()*0.03
+            generated_y = y + torch.randn(y.shape).cuda()*0.03
+            x = generated_x * selection + x * (1 - selection)
+            y = generated_y * selection + y * (1 - selection)
+        
+        pred = self.forward(x)
+        #pred = torch.cat((self.forward(x), self.forward(generated_x)), dim=0)
+        #y = torch.cat((y, generated_y), dim=0)
         loss = self.train_criterion(pred, y)
         return loss, pred, y
 
@@ -153,11 +148,6 @@ class PDEModel(LightningModule):
             generated_y = y[..., ::2, ::2] #highres_y = y #
             x = filters.blur_pool2d(x[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) #x = x[:, :, :2, ::2, ::2] #
             y = filters.blur_pool2d(y[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) #y = y[:, :, :2, ::2, ::2] #
-        else:
-            highres_x = x
-            x = filters.box_blur(x[:,0], kernel_size=self.smoothing_factor).unsqueeze(1) 
-            y = filters.box_blur(y[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)
-            highres_x = highres_x - x
 
         pred = self.forward(x)
         #pred = self.forward_modified_hr_encoder(x, highres_x)
