@@ -37,14 +37,19 @@ class KolmogorovDatasetOpener(dp.iter.IterDataPipe):
         self.trajectories = []
         self.resolution = "32"
         self.high_resolution = None
+        self.max_len = None
 
-        for path in self.dp:
+        for path in self.dp:    
             print(path)
             f = h5py.File(path, "r")
             data_lowres_key = f"full_prefix_{self.resolution}x{self.resolution}"
             data_lowres = np.array(f[data_lowres_key])[:, 128:]
             data_lowres = torch.Tensor(data_lowres)
             data_lowres = torch.swapaxes(data_lowres, 0, 1)
+            print(len(data_lowres))
+            if self.max_len is None:
+                self.max_len = (len(data_lowres)//self.time_step)*self.time_step
+                print(self.max_len)
 
             if self.high_resolution is not None:
                 data_highres_key = f"full_prefix_{self.high_resolution}x{self.high_resolution}"
@@ -53,13 +58,13 @@ class KolmogorovDatasetOpener(dp.iter.IterDataPipe):
                 data_highres = torch.swapaxes(data_highres, 0, 1)
                 data_full = torch.cat((data_lowres.repeat_interleave(2, axis=-1).repeat_interleave(2, axis=-2), data_highres), axis=1)
             else:
-                data_full = data_lowres
+                data_full = data_lowres[:self.max_len]
 
             time_gaps = range(self.time_step)
 
             for time_gap in time_gaps:
-                print(data_full[time_gap::16].shape)
-                self.trajectories.append(data_full[time_gap::16])
+                print(data_full[time_gap::self.time_step].shape)
+                self.trajectories.append(data_full[time_gap::self.time_step])
         
         if self.mode == "train":
             random.shuffle(self.trajectories)
