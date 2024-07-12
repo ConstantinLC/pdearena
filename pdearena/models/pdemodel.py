@@ -107,7 +107,7 @@ class PDEModel(LightningModule):
         self.max_start_time = (
             reduced_time_resolution - self.hparams.time_future * self.hparams.max_num_steps - self.hparams.time_gap
         )
-        self.smoothing_factor = 8
+        self.smoothing_factor = 5
         self.stride = 2
         self.upsample_factor = 2
         self.multi_resolution = False
@@ -120,7 +120,7 @@ class PDEModel(LightningModule):
         
     def forward_modified_hr_encoder(self, x, highres_x=None):
         hr_encoding = self.hr_encoder(highres_x)
-        return self.std_correction * (self.model(x) + hr_encoding) + x
+        return self.std_correction * (hr_encoding) + x
         #return self.std_correction * self.model(torch.cat((x, hr_encoding), dim=2)) + x
         #return 0.15* (self.model(x) + hr_encoding) + x
 
@@ -143,10 +143,10 @@ class PDEModel(LightningModule):
         else:
             #print(highres_x)
             highres_x = x
-            x = filters.box_blur(x[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)
-            y = filters.box_blur(y[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)
-            highres_x = highres_x - x
-            
+            highres_y = y
+            x = filters.box_blur(highres_x[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)
+            y = filters.box_blur(highres_y[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)
+            highres_x = filters.box_blur(highres_x[:,0], kernel_size=3).unsqueeze(1)            
             
         pred = self.forward_modified_hr_encoder(x, highres_x)
         #highres_x = x.repeat_interleave(2, dim=-1).repeat_interleave(2, dim=-2)
@@ -164,12 +164,13 @@ class PDEModel(LightningModule):
             y = filters.blur_pool2d(highres_y[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) #y = y[:, :, :2, ::2, ::2] # 
         else:
             highres_x = x
-            x = filters.box_blur(x[:,0], kernel_size=self.smoothing_factor).unsqueeze(1) 
-            y = filters.box_blur(y[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)
-            highres_x = highres_x - x
+            highres_y = y
+            x = filters.box_blur(highres_x[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)
+            y = filters.box_blur(highres_y[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)
+            highres_x = filters.box_blur(highres_x[:,0], kernel_size=3).unsqueeze(1)            
 
-        pred = self.forward_modified_pre_lr_encoder(x)
-        #pred = self.forward_modified_hr_encoder(x, highres_x)
+        #pred = self.forward_modified_pre_lr_encoder(x)
+        pred = self.forward_modified_hr_encoder(x, highres_x)
         loss = {k: vc(pred, y) for k, vc in self.val_criterions.items()}
         return loss, pred, y
 
