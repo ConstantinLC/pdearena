@@ -17,6 +17,8 @@ from pdearena.rollout import cond_rollout2d
 
 from .registry import COND_MODEL_REGISTRY
 
+import kornia.filters as filters
+
 logger = utils.get_logger(__name__)
 
 
@@ -110,12 +112,16 @@ class PDERefiner(LightningModule):
             reduced_time_resolution - self.hparams.time_future * self.hparams.max_num_steps - self.hparams.time_gap
         )
         self.max_start_time = max(0, self.max_start_time)
+        self.smoothing_factor = 3
 
     def forward(self, x, cond):
         return self.predict_next_solution(x, cond)
 
     def train_step(self, batch):
-        x, y, cond = batch
+        x, y = batch
+        cond = None
+        x = filters.box_blur(x[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)
+        y = filters.box_blur(y[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)            
         if self.hparams.predict_difference:
             # Predict difference to next step instead of next step directly.
             y = (y - x[:, -1:]) / self.hparams.difference_weight
@@ -132,7 +138,10 @@ class PDERefiner(LightningModule):
         return loss, pred, target
 
     def eval_step(self, batch):
-        x, y, cond = batch
+        x, y = batch
+        x = filters.box_blur(x[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)
+        y = filters.box_blur(y[:,0], kernel_size=self.smoothing_factor).unsqueeze(1)            
+        cond = None
         pred = self.predict_next_solution(x, cond)
         loss = {k: vc(pred, y) for k, vc in self.val_criterions.items()}
         return loss, pred, y
@@ -189,6 +198,9 @@ class PDERefiner(LightningModule):
 
     def compute_rolloutloss(self, batch: Any):
         (u, v, cond, grid) = batch
+
+        u = filters.box_blur(u.reshape(
+                (u.shape[0], u.shape[1]*u.shape[2], u.shape[3], u.shape[4])), kernel_size=self.smoothing_factor).reshape((u.shape[0], u.shape[1], u.shape[2], u.shape[3], u.shape[4]))
 
         losses = {k: [] for k in self.rollout_criterions.keys()}
         for start in range(

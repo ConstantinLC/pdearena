@@ -11,6 +11,7 @@ from pdearena.modules.twod_resnet import (
     FourierBasicBlock,
 )
 from pdearena.modules.conditioned.oned_resnet import FourierBasicBlock1D, OneD_DilatedBasicBlock
+from pdearena.modules.conditioned.twod_resnet import CondDilatedBasicBlock
 
 MODEL_REGISTRY = {
     "FNO-128-8m": {
@@ -628,6 +629,15 @@ COND_MODEL_REGISTRY = {
             "norm": False,
             "block": FourierBasicBlock1D,
             "num_blocks": [1, 1, 1, 1],
+        },
+    },
+    "DilResNet-64": {
+        "class_path": "pdearena.modules.conditioned.twod_resnet.ResNet",
+        "init_args": {
+            "hidden_channels": 64,
+            "norm": True,
+            "num_blocks": [1, 1, 1, 1],
+            "block": CondDilatedBasicBlock
         },
     },
 }
