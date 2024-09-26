@@ -107,20 +107,20 @@ class PDEModel(LightningModule):
         self.max_start_time = (
             reduced_time_resolution - self.hparams.time_future * self.hparams.max_num_steps - self.hparams.time_gap
         )
-        self.smoothing_factor = 5
+        self.smoothing_factor = 2
         self.stride = 2
         self.upsample_factor = 2
         self.multi_resolution = False
         #n_components = self.pde.n_scalar_components + 2*self.pde.n_vector_components
         n_components = 2
         self.teacher_model = HR_Encoder(in_channels=n_components, out_channels=n_components, stride=self.stride, smoothing_factor=self.smoothing_factor)
-        self.std_correction = 0.13
+        self.std_correction = 0.1
 
-        self.teacher_ckpt = '/mnt/SSD2/constantin/pdearena/outputs/kolmogorov2d-0624/ckpts/last-v21.ckpt'
-        pretrained_dict = torch.load(self.teacher_ckpt)['state_dict']
-        self.teacher_model.load_state_dict({k.replace("model.","model."): v for k, v in pretrained_dict.items() if k.startswith("model")})
-        for param in self.teacher_model.parameters():
-            param.requires_grad = False
+        #self.teacher_ckpt = '/mnt/SSD2/constantin/pdearena/outputs/kolmogorov2d-0624/ckpts/last-v21.ckpt'
+        #pretrained_dict = torch.load(self.teacher_ckpt)['state_dict']
+        #self.teacher_model.load_state_dict({k.replace("model.","model."): v for k, v in pretrained_dict.items() if k.startswith("model")})
+        #for param in self.teacher_model.parameters():
+        #    param.requires_grad = False
         
     def forward_teacher(self, x, highres_x=None):
         hr_encoding = self.teacher_model(highres_x)
@@ -142,7 +142,7 @@ class PDEModel(LightningModule):
         pred_student = self.forward_student(x)
         pred_teacher = self.forward_teacher(x, highres_x)
         
-        loss = self.train_criterion(pred_student, pred_teacher) + self.train_criterion(pred_student, y)
+        loss = self.train_criterion(pred_teacher, y) + self.train_criterion(pred_student, pred_teacher) + self.train_criterion(pred_student, y)
         return loss, pred_student, y
 
     def eval_step(self, batch):
