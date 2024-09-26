@@ -107,7 +107,7 @@ class PDEModel(LightningModule):
         self.max_start_time = (
             reduced_time_resolution - self.hparams.time_future * self.hparams.max_num_steps - self.hparams.time_gap
         )
-        self.smoothing_factor = 3
+        self.smoothing_factor = 2
         self.stride = 2
         self.upsample_factor = 2
         self.multi_resolution = False
@@ -125,16 +125,24 @@ class PDEModel(LightningModule):
 
     def train_step(self, batch):
         x, y = batch
-        x = filters.box_blur(x[:,0], kernel_size=self.smoothing_factor).unsqueeze(1) 
-        y = filters.box_blur(y[:,0], kernel_size=self.smoothing_factor).unsqueeze(1) 
+        if self.multi_resolution:
+            x = filters.blur_pool2d(x[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) 
+            y = filters.blur_pool2d(y[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) 
+        else:
+            x = filters.box_blur(x[:,0], kernel_size=self.smoothing_factor).unsqueeze(1) 
+            y = filters.box_blur(y[:,0], kernel_size=self.smoothing_factor).unsqueeze(1) 
         pred = self.forward(x)
         loss = self.train_criterion(pred, y)
         return loss, pred, y
 
     def eval_step(self, batch):
         x, y = batch
-        x = filters.box_blur(x[:,0], kernel_size=self.smoothing_factor).unsqueeze(1) 
-        y = filters.box_blur(y[:,0], kernel_size=self.smoothing_factor).unsqueeze(1) 
+        if self.multi_resolution:
+            x = filters.blur_pool2d(x[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) 
+            y = filters.blur_pool2d(y[:,0], kernel_size=self.smoothing_factor, stride=self.stride).unsqueeze(1) 
+        else:
+            x = filters.box_blur(x[:,0], kernel_size=self.smoothing_factor).unsqueeze(1) 
+            y = filters.box_blur(y[:,0], kernel_size=self.smoothing_factor).unsqueeze(1) 
         pred = self.forward(x)
         loss = {k: vc(pred, y) for k, vc in self.val_criterions.items()}
         return loss, pred, y

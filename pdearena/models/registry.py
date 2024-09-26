@@ -383,6 +383,15 @@ MODEL_REGISTRY = {
             "num_blocks": [1, 1, 1, 1],
         },
     },
+    "DilResNet-48": {
+        "class_path": "pdearena.modules.twod_resnet.ResNet",
+        "init_args": {
+            "hidden_channels": 32,
+            "norm": False,
+            "block": DilatedBasicBlock,
+            "num_blocks": [1, 1, 1, 1],
+        },
+    },
     "DilResNet-64": {
         "class_path": "pdearena.modules.twod_resnet.ResNet",
         "init_args": {
